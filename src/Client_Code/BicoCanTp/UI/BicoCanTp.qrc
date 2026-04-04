@@ -1,0 +1,14 @@
+<RCC>
+    <qresource>
+        <file>qtquickcontrols2.conf</file>
+        <file>BicoCanTp.qmlproject</file>
+        <file>BicoCanTp/Constants/Constants.qml</file>
+        <file>BicoCanTp/Constants/qmldir</file>
+        <file>BicoCanTp/MyComponents/ModernButton/ModernButton.qml</file>
+        <file>BicoCanTp/MyComponents/ModernButton/WrapperModernButton.qml</file>
+        <file>BicoCanTp/OtherComponents/ModernButton/ModernButton.qml</file>
+        <file>BicoCanTp/OtherComponents/ModernButton/OtherComponentsWrapperModernButton.qml</file>
+        <file>BicoCanTpContent/App.qml</file>
+        <file>BicoCanTpContent/Screen01.qml</file>
+    </qresource>
+</RCC>
