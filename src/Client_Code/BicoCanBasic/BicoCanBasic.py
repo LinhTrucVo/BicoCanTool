@@ -69,7 +69,6 @@ class BicoCanBasic(Bico_QUIThread):
                 hex_string = hex_string + '   ' + f"{can_msg.data[i]:02X}"
                 pass
         can_log = f'{datetime.now().time()}\t{port_name.ljust(17, " ")}\t{direction}\t{can_id_as_hex_str.ljust(9, " ")}    {str(can_msg.dlc).ljust(4, " ")}{hex_string.upper()}'
-        print(can_log)
         return can_log
     
     def updateCanLog(self, can_log):

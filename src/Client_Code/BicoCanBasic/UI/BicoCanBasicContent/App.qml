@@ -8,8 +8,8 @@ import QtQuick.Layouts 2.12
 import "../BicoCanBasic/MyComponents/MyText"
 import "../BicoCanBasic/MyComponents/MyCanSend"
 
-// ApplicationWindow {
-Window {
+ApplicationWindow {
+// Window {
     id: window
     objectName: "window"
     width: 910
@@ -87,7 +87,7 @@ Window {
 
 
     // Theme mode: 0 = Light, 1 = System, 2 = Dark
-    property int themeMode: 0
+    property int themeMode: 1
     Material.theme: themeMode === 0 ? Material.Light : (themeMode === 2 ? Material.Dark : Material.System)
 
     // Tri-state theme switch (top-right)
@@ -264,35 +264,7 @@ Window {
     MyText {
         x: 12
         y: 33
-        text: "Time"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        x: 170
-        y: 33
-        text: "Port"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        x: 331
-        y: 33
-        text: "Dir"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        x: 413
-        y: 33
-        text: "ID"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        x: 495
-        y: 33
-        text: "DLC/[idx]"
+        text: "Time" + " ".repeat(27) + "Port" + " ".repeat(27) + "Dir" + " ".repeat(15) + "ID" + " ".repeat(14) + "DLC/[idx]"
         font.pixelSize: 15
     }
 
@@ -306,8 +278,6 @@ Window {
         }
     }
 
-    // Input field for CAN data
-
     // Flickable Item for Send Rows
     Flickable {
         id: sendRowsFlickable
@@ -316,25 +286,28 @@ Window {
         width: 910
         height: 251
         contentWidth: 910
-        contentHeight: row15.y + row15.height
+        contentHeight: ((rowCount - 1) * 46) + 50
         clip: true
+        ScrollBar.vertical: ScrollBar {}
 
-        MyCanSend { id: row0;  rowId: "row0";  y: 0;   canIdDefault: "18DA10F1x"; onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row0.effectiveCanId}",  "can_data": "${row0.effectiveCanData}",  "interval_ms": ${parseInt(row0.ms)||0}, "row_id": "${row0.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row0.rowId}"}`)  }
-        MyCanSend { id: row1;  rowId: "row1";  y: 46;  canIdDefault: "18DA10F1x"; onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row1.effectiveCanId}",  "can_data": "${row1.effectiveCanData}",  "interval_ms": ${parseInt(row1.ms)||0}, "row_id": "${row1.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row1.rowId}"}`)  }
-        MyCanSend { id: row2;  rowId: "row2";  y: 92;  canIdDefault: "18DAF110x"; onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row2.effectiveCanId}",  "can_data": "${row2.effectiveCanData}",  "interval_ms": ${parseInt(row2.ms)||0}, "row_id": "${row2.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row2.rowId}"}`)  }
-        MyCanSend { id: row3;  rowId: "row3";  y: 138; canIdDefault: "18DAF110x"; onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row3.effectiveCanId}",  "can_data": "${row3.effectiveCanData}",  "interval_ms": ${parseInt(row3.ms)||0}, "row_id": "${row3.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row3.rowId}"}`)  }
-        MyCanSend { id: row4;  rowId: "row4";  y: 184; canIdDefault: "712";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row4.effectiveCanId}",  "can_data": "${row4.effectiveCanData}",  "interval_ms": ${parseInt(row4.ms)||0}, "row_id": "${row4.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row4.rowId}"}`)  }
-        MyCanSend { id: row5;  rowId: "row5";  y: 230; canIdDefault: "712";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row5.effectiveCanId}",  "can_data": "${row5.effectiveCanData}",  "interval_ms": ${parseInt(row5.ms)||0}, "row_id": "${row5.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row5.rowId}"}`)  }
-        MyCanSend { id: row6;  rowId: "row6";  y: 276; canIdDefault: "123x";      onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row6.effectiveCanId}",  "can_data": "${row6.effectiveCanData}",  "interval_ms": ${parseInt(row6.ms)||0}, "row_id": "${row6.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row6.rowId}"}`)  }
-        MyCanSend { id: row7;  rowId: "row7";  y: 322; canIdDefault: "321x";      onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row7.effectiveCanId}",  "can_data": "${row7.effectiveCanData}",  "interval_ms": ${parseInt(row7.ms)||0}, "row_id": "${row7.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row7.rowId}"}`)  }
-        MyCanSend { id: row8;  rowId: "row8";  y: 368; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row8.effectiveCanId}",  "can_data": "${row8.effectiveCanData}",  "interval_ms": ${parseInt(row8.ms)||0}, "row_id": "${row8.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row8.rowId}"}`)  }
-        MyCanSend { id: row9;  rowId: "row9";  y: 414; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row9.effectiveCanId}",  "can_data": "${row9.effectiveCanData}",  "interval_ms": ${parseInt(row9.ms)||0}, "row_id": "${row9.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row9.rowId}"}`)  }
-        MyCanSend { id: row10; rowId: "row10"; y: 460; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row10.effectiveCanId}", "can_data": "${row10.effectiveCanData}", "interval_ms": ${parseInt(row10.ms)||0}, "row_id": "${row10.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row10.rowId}"}`) }
-        MyCanSend { id: row11; rowId: "row11"; y: 506; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row11.effectiveCanId}", "can_data": "${row11.effectiveCanData}", "interval_ms": ${parseInt(row11.ms)||0}, "row_id": "${row11.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row11.rowId}"}`) }
-        MyCanSend { id: row12; rowId: "row12"; y: 552; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row12.effectiveCanId}", "can_data": "${row12.effectiveCanData}", "interval_ms": ${parseInt(row12.ms)||0}, "row_id": "${row12.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row12.rowId}"}`) }
-        MyCanSend { id: row13; rowId: "row13"; y: 598; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row13.effectiveCanId}", "can_data": "${row13.effectiveCanData}", "interval_ms": ${parseInt(row13.ms)||0}, "row_id": "${row13.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row13.rowId}"}`) }
-        MyCanSend { id: row14; rowId: "row14"; y: 644; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row14.effectiveCanId}", "can_data": "${row14.effectiveCanData}", "interval_ms": ${parseInt(row14.ms)||0}, "row_id": "${row14.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row14.rowId}"}`) }
-        MyCanSend { id: row15; rowId: "row15"; y: 690; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row15.effectiveCanId}", "can_data": "${row15.effectiveCanData}", "interval_ms": ${parseInt(row15.ms)||0}, "row_id": "${row15.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row15.rowId}"}`) }
+        property int rowCount: 100
+
+        Repeater {
+            id: rowRepeater
+            model: sendRowsFlickable.rowCount
+
+            MyCanSend {
+                rowId: "row" + index
+                y: index * 46
+                onSendClicked: {
+                    var currentRow = rowRepeater.itemAt(index)
+                    toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${currentRow.effectiveCanId}", "can_data": "${currentRow.effectiveCanData}", "interval_ms": ${parseInt(currentRow.ms)||0}, "row_id": "row${index}"}`)
+                }
+                onStopClicked: {
+                    toThread(_MSG.output.STOP_SEND, `{"row_id": "row${index}"}`)
+                }
+            }
+        }
     }
 }
 /*##^##

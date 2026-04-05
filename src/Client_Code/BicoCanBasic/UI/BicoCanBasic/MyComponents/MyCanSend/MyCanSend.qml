@@ -19,6 +19,26 @@ Item {
     signal sendClicked()
     signal stopClicked()
 
+    function isValidHex(str) {
+        // Remove spaces
+        var cleaned = str.replace(/\s/g, "")
+        // Check if even number of characters
+        if (cleaned.length % 2 !== 0) return false
+        // Check if all characters are valid hex
+        var hexRegex = /^[0-9A-Fa-f]*$/
+        return hexRegex.test(cleaned)
+    }
+
+    function formatHexWithSpaces(str) {
+        var cleaned = str.replace(/\s/g, "").toUpperCase()
+        var formatted = ""
+        for (var i = 0; i < cleaned.length; i += 2) {
+            if (i > 0) formatted += " "
+            formatted += cleaned[i] + (i + 1 < cleaned.length ? cleaned[i + 1] : "")
+        }
+        return formatted
+    }
+
     TextField {
         id: canIDField
         x: 15
@@ -38,7 +58,10 @@ Item {
         height: 40
         placeholderText: root.canDataDefault
         font.pixelSize: 15
-        onTextChanged: text = text.toUpperCase()
+        color: isValidHex(text) ? Material.foreground : "#FF6B6B"
+        onTextChanged: {
+            text = text.toUpperCase()
+        }
     }
 
     TextField {
@@ -71,6 +94,8 @@ Item {
                 if (!isNaN(interval) && interval > 0) {
                     root.isSending = true
                 }
+                // Format canDataField with spaces every 2 characters
+                canDataField.text = formatHexWithSpaces(canDataField.text)
                 root.sendClicked()
             }
         }
