@@ -1,14 +1,17 @@
 <RCC>
     <qresource>
-        <file>qtquickcontrols2.conf</file>
         <file>BicoCanBasic.qmlproject</file>
         <file>BicoCanBasic/Constants/Constants.qml</file>
         <file>BicoCanBasic/Constants/qmldir</file>
         <file>BicoCanBasic/MyComponents/ModernButton/ModernButton.qml</file>
         <file>BicoCanBasic/MyComponents/ModernButton/WrapperModernButton.qml</file>
+        <file>BicoCanBasic/MyComponents/MyCanSend/MyCanSend.qml</file>
+        <file>BicoCanBasic/MyComponents/MyText/MyText.qml</file>
         <file>BicoCanBasic/OtherComponents/ModernButton/ModernButton.qml</file>
         <file>BicoCanBasic/OtherComponents/ModernButton/OtherComponentsWrapperModernButton.qml</file>
         <file>BicoCanBasicContent/App.qml</file>
         <file>BicoCanBasicContent/Screen01.qml</file>
+        <file>BicoCanBasicContent/UIMessageInterface.json</file>
+        <file>qtquickcontrols2.conf</file>
     </qresource>
 </RCC>

@@ -4,6 +4,7 @@
         "CONNECT":                  "Connect",
         "DISCONNECT":               "Disconnect",
         "SEND":                     "Send",
+        "STOP_SEND":                "stop_send",
         "COM_PORT_LIST_UPDATE":     "com_port_list_update",
         "QUERY_CONNECTION_STATUS":  "query_connection_status"
     },

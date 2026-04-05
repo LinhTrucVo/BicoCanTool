@@ -2,20 +2,20 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 // import QtQuick.Controls.Fusion
-// import QtQuick.Controls.Material
+import QtQuick.Controls.Material
 // import QtQuick.Controls.Universal
 import QtQuick.Layouts 2.12
 import "../BicoCanBasic/MyComponents/MyText"
+import "../BicoCanBasic/MyComponents/MyCanSend"
 
-// ApplicationWindow{
-Window{
+// ApplicationWindow {
+Window {
     id: window
     objectName: "window"
     width: 910
     height: 880
     visible: true
     title: qsTr("BICO CAN Basic")
-    // Material.theme: Material.System
 
     // Message interface loaded from MessageInterface.json (same folder)
     property var _MSG: ({})
@@ -52,9 +52,15 @@ Window{
         }
         else if (rev_mess === _MSG.input.CAN_LOG)
         {
-            console.log(rev_mess + " " + rev_data)
-            canLogArea.text += rev_data + "\r\n"
-            canLogArea.cursorPosition = canLogArea.text.length
+            var newLines = rev_data.split("\n")
+            for (var i = 0; i < newLines.length; i++) {
+                if (newLines[i].length > 0) {
+                    if (canLogModel.count >= 50000)
+                        canLogModel.remove(0, 1)
+                    canLogModel.append({"line": newLines[i]})
+                }
+            }
+            canLogView.positionViewAtEnd()
         }
         else if (rev_mess === _MSG.input.CONNECTION_STATUS)
         {
@@ -80,17 +86,69 @@ Window{
 
 
 
-    // Input field for CAN baudrate
-    MyText {
-        x: 497
-        y: 424
-        text: "CAN Baud:"
-        font.pixelSize: 15
+    // Theme mode: 0 = Light, 1 = System, 2 = Dark
+    property int themeMode: 0
+    Material.theme: themeMode === 0 ? Material.Light : (themeMode === 2 ? Material.Dark : Material.System)
+
+    // Tri-state theme switch (top-right)
+    Row {
+        id: themeSwitch
+        x: window.width - width - 5
+        y: 4
+        z: 10
+        spacing: 0
+
+        Repeater {
+            model: [
+                { label: "\u2600", mode: 0 },  // ☀ Light
+                { label: "Auto",   mode: 1 },  // System
+                { label: "\u263E", mode: 2 }   // ☾ Dark
+            ]
+            delegate: Rectangle {
+                width: 40
+                height: 24
+                radius: index === 0 ? 12 : (index === 2 ? 12 : 0)
+                color: window.themeMode === modelData.mode
+                       ? Material.accent
+                       : (window.Material.theme === Material.Dark ? "#555" : "#ccc")
+
+                // Round only the appropriate corners
+                Rectangle {
+                    visible: index === 0
+                    anchors.right: parent.right
+                    width: parent.width / 2
+                    height: parent.height
+                    color: parent.color
+                }
+                Rectangle {
+                    visible: index === 2
+                    anchors.left: parent.left
+                    width: parent.width / 2
+                    height: parent.height
+                    color: parent.color
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: modelData.label
+                    font.pixelSize: index === 1 ? 10 : 14
+                    color: window.themeMode === modelData.mode ? "white" : Material.foreground
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: window.themeMode = modelData.mode
+                }
+            }
+        }
     }
+
+
+    // Input field for CAN baudrate
     ComboBox {
         id: baudrateField
-        x: 497
-        y: 446
+        x: 426
+        y: 556
         width: 115
         height: 40
         model: ["500000", "1000000", "2000000"]
@@ -98,18 +156,11 @@ Window{
         font.pixelSize: 15
     }
 
-    MyText {
-        x: 616
-        y: 424
-        text: "Serial Port:"
-        font.pixelSize: 15
-    }
-
     ComboBox {
         id: comPortDropdown
-        x: 616
-        y: 446
-        width: 153
+        x: 547
+        y: 556
+        width: 191
         height: 40
         model: availablePortsModel
         font.pixelSize: 15
@@ -135,8 +186,8 @@ Window{
 
     // FD checkbox label
     MyText {
-        x: 778
-        y: 424
+        x: 745
+        y: 550
         text: "FD:"
         font.pixelSize: 15
     }
@@ -144,8 +195,8 @@ Window{
     // FD checkbox
     CheckBox {
         id: fdCheckBox
-        x: 778
-        y: 446
+        x: 745
+        y: 565
         width: 20
         height: 40
         checked: false
@@ -154,10 +205,10 @@ Window{
     // Button to connect to the device
     Button {
         id: connectButton
-        x: 807
-        y: 446
+        x: 776
+        y: 556
         text: "Connect"
-        width: 91
+        width: 128
         height: 40
         font.pixelSize: 15
         onClicked: {
@@ -170,602 +221,120 @@ Window{
 
 
     // Wide area to monitor CAN frames
-    Item {
-        x: 5
-        y: 30
-        width: 770
-        height: 350
-        ScrollView {
-            id: scrollView
+    Rectangle {
+        x: 10
+        y: 55
+        width: 890
+        height: 490
+        color: "transparent"
+        border.color: Material.foreground
+        border.width: 1
+
+        ListModel { id: canLogModel }
+
+        ListView {
+            id: canLogView
             anchors.fill: parent
-            anchors.rightMargin: -132
-            TextArea {
-                id: canLogArea
-                x: 0
-                y: 0
-                width: parent.width
-                height: parent.height
-                // placeholderText: "CAN log appear here...."
-                placeholderText: "00:27:22.676474	Virtual Channel 1	TX	18DA10F1x    8	DD   DD   DD   DD   DD   DD   DD   DD"
-                readOnly: false
+            anchors.margins: 1
+            model: canLogModel
+            clip: true
+            ScrollBar.vertical: ScrollBar {}
+
+            delegate: Text {
+                width: canLogView.width
+                text: model.line
                 font.pixelSize: 15
-                font.family: "Consolas" // Replace with your desired font
+                font.family: "Consolas"
+                color: Material.foreground
+                wrapMode: Text.NoWrap
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "CAN log appear here...."
+                visible: canLogModel.count === 0
+                font.pixelSize: 15
+                color: Material.foreground
+                opacity: 0.5
             }
         }
     }
 
-
-    // Button to send CAN frame
-    Button {
-        id: sendButton
-        x: 356
-        y: 446
-        text: "Send"
-        width: 78
-        height: 40
-        font.pixelSize: 15
-        onClicked: {
-            // Logic to send CAN frame goes here
-            // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-            var can_id = canIDField.text
-            var can_data = canDataField.text
-            if (can_id == "")
-            {
-                can_id = canIDField.placeholderText
-            }
-            if (can_data == "")
-            {
-                can_data = canDataField.placeholderText
-            }
-            toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
-        }
-    }
-    
-    // Input field for CAN ID
-    TextField {
-        id: canIDField
-        x: 15
-        y: 446
-        width: 127
-        height: 40
-        placeholderText: "18DA10F1x"
-        font.pixelSize: 15
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    // Input field for CAN data
-    MyText {
-        x: 146
-        y: 424
-        text: "CAN Data:"
-        font.pixelSize: 15
-    }
-    TextField {
-        id: canDataField
-        x: 148
-        y: 446
-        width: 202
-        height: 40
-        placeholderText: "02 10 01"
-        font.pixelSize: 15
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
 
     MyText {
         x: 12
-        y: 12
+        y: 33
         text: "Time"
         font.pixelSize: 15
     }
 
     MyText {
         x: 170
-        y: 12
+        y: 33
         text: "Port"
         font.pixelSize: 15
     }
 
     MyText {
         x: 331
-        y: 12
+        y: 33
         text: "Dir"
         font.pixelSize: 15
     }
 
     MyText {
-        x: 15
-        y: 424
-        text: "CAN ID"
-        font.pixelSize: 15
-    }
-
-    MyText {
         x: 413
-        y: 12
+        y: 33
         text: "ID"
         font.pixelSize: 15
     }
 
     MyText {
-        x: 515
-        y: 12
-        text: "DLC"
+        x: 495
+        y: 33
+        text: "DLC/[idx]"
         font.pixelSize: 15
     }
 
-    MyText {
-        id: byte0
-        x: 571
-        y: 12
-        text: "[0]"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        id: byte1
-        x: 612
-        y: 12
-        text: "[1]"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        id: byte2
-        x: 653
-        y: 12
-        text: "[2]"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        id: byte3
-        x: 694
-        y: 12
-        text: "[3]"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        id: byte4
-        x: 735
-        y: 12
-        text: "[4]"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        id: byte5
-        x: 776
-        y: 12
-        text: "[5]"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        id: byte6
-        x: 817
-        y: 12
-        text: "[6]"
-        font.pixelSize: 15
-    }
-
-    MyText {
-        id: byte7
-        x: 858
-        y: 12
-        text: "[7]"
-        font.pixelSize: 15
-    }
-
-    Button {
-        id: sendButton1
-        x: 356
-        y: 492
-        width: 78
-        height: 40
-        text: "Send"
-        font.pixelSize: 15
-        onClicked: {
-                // Logic to send CAN frame goes here
-                // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-                var can_id = canIDField1.text
-                var can_data = canDataField1.text
-                if (can_id == "")
-                {
-                    can_id = canIDField1.placeholderText
-                }
-                if (can_data == "")
-                {
-                    can_data = canDataField1.placeholderText
-                }
-                toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
+    Repeater {
+        model: 8
+        MyText {
+            x: 575 + index * 41
+            y: 33
+            text: "[" + index + "]"
+            font.pixelSize: 15
         }
     }
 
-    TextField {
-        id: canIDField1
-        x: 15
-        y: 492
-        width: 127
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "18DA10F1x"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
+    // Input field for CAN data
 
-    TextField {
-        id: canDataField1
-        x: 148
-        y: 492
-        width: 202
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "02 10 01"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
+    // Flickable Item for Send Rows
+    Flickable {
+        id: sendRowsFlickable
+        x: 0
+        y: 616
+        width: 910
+        height: 251
+        contentWidth: 910
+        contentHeight: row15.y + row15.height
+        clip: true
 
-    Button {
-        id: sendButton2
-        x: 356
-        y: 538
-        width: 78
-        height: 40
-        text: "Send"
-        font.pixelSize: 15
-        onClicked: {
-                // Logic to send CAN frame goes here
-                // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-                var can_id = canIDField2.text
-                var can_data = canDataField2.text
-                if (can_id == "")
-                {
-                    can_id = canIDField2.placeholderText
-                }
-                if (can_data == "")
-                {
-                    can_data = canDataField2.placeholderText
-                }
-                toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
-        }
-    }
-
-    TextField {
-        id: canIDField2
-        x: 15
-        y: 538
-        width: 127
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "18DAF110x"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    TextField {
-        id: canDataField2
-        x: 148
-        y: 538
-        width: 202
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "02 10 01"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    Button {
-        id: sendButton3
-        x: 356
-        y: 584
-        width: 78
-        height: 40
-        text: "Send"
-        font.pixelSize: 15
-        onClicked: {
-                // Logic to send CAN frame goes here
-                // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-                var can_id = canIDField3.text
-                var can_data = canDataField3.text
-                if (can_id == "")
-                {
-                    can_id = canIDField3.placeholderText
-                }
-                if (can_data == "")
-                {
-                    can_data = canDataField3.placeholderText
-                }
-                toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
-        }
-    }
-
-    TextField {
-        id: canIDField3
-        x: 15
-        y: 584
-        width: 127
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "18DAF110x"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    TextField {
-        id: canDataField3
-        x: 148
-        y: 584
-        width: 202
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "02 10 01"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    Button {
-        id: sendButton4
-        x: 356
-        y: 630
-        width: 78
-        height: 40
-        text: "Send"
-        font.pixelSize: 15
-        onClicked: {
-                // Logic to send CAN frame goes here
-                // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-                var can_id = canIDField4.text
-                var can_data = canDataField4.text
-                if (can_id == "")
-                {
-                    can_id = canIDField4.placeholderText
-                }
-                if (can_data == "")
-                {
-                    can_data = canDataField4.placeholderText
-                }
-                toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
-        }
-    }
-
-    TextField {
-        id: canIDField4
-        x: 15
-        y: 630
-        width: 127
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "712"
-    }
-
-    TextField {
-        id: canDataField4
-        x: 148
-        y: 630
-        width: 202
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "02 10 01"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    Button {
-        id: sendButton5
-        x: 356
-        y: 676
-        width: 78
-        height: 40
-        text: "Send"
-        font.pixelSize: 15
-        onClicked: {
-                // Logic to send CAN frame goes here
-                // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-                var can_id = canIDField5.text
-                var can_data = canDataField5.text
-                if (can_id == "")
-                {
-                    can_id = canIDField5.placeholderText
-                }
-                if (can_data == "")
-                {
-                    can_data = canDataField5.placeholderText
-                }
-                toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
-        }
-    }
-
-    TextField {
-        id: canIDField5
-        x: 15
-        y: 676
-        width: 127
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "712"
-
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    TextField {
-        id: canDataField5
-        x: 148
-        y: 676
-        width: 202
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "02 10 01"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    Button {
-        id: sendButton6
-        x: 356
-        y: 722
-        width: 78
-        height: 40
-        text: "Send"
-        font.pixelSize: 15
-        onClicked: {
-                // Logic to send CAN frame goes here
-                // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-                var can_id = canIDField6.text
-                var can_data = canDataField6.text
-                if (can_id == "")
-                {
-                    can_id = canIDField6.placeholderText
-                }
-                if (can_data == "")
-                {
-                    can_data = canDataField6.placeholderText
-                }
-                toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
-        }
-    }
-
-    TextField {
-        id: canIDField6
-        x: 15
-        y: 722
-        width: 127
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "123x"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    TextField {
-        id: canDataField6
-        x: 148
-        y: 722
-        width: 202
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "02 10 01"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    Button {
-        id: sendButton7
-        x: 356
-        y: 768
-        width: 78
-        height: 40
-        text: "Send"
-        font.pixelSize: 15
-        onClicked: {
-                // Logic to send CAN frame goes here
-                // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-                var can_id = canIDField7.text
-                var can_data = canDataField7.text
-                if (can_id == "")
-                {
-                    can_id = canIDField7.placeholderText
-                }
-                if (can_data == "")
-                {
-                    can_data = canDataField7.placeholderText
-                }
-                toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
-        }
-    }
-
-    TextField {
-        id: canIDField7
-        x: 15
-        y: 768
-        width: 127
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "321x"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    TextField {
-        id: canDataField7
-        x: 148
-        y: 768
-        width: 202
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "02 10 01"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    Button {
-        id: sendButton8
-        x: 356
-        y: 814
-        width: 78
-        height: 40
-        text: "Send"
-        font.pixelSize: 15
-        onClicked: {
-                // Logic to send CAN frame goes here
-                // console.log("Sending CAN frame with ID: " + canIDField.text + " and Data: " + canDataField.text)
-                var can_id = canIDField8.text
-                var can_data = canDataField8.text
-                if (can_id == "")
-                {
-                    can_id = canIDField8.placeholderText
-                }
-                if (can_data == "")
-                {
-                    can_data = canDataField8.placeholderText
-                }
-                toThread(text, `{"can_port": "${comPortDropdown.currentText}", "can_id": "${can_id}", "can_data": "${can_data}"}`)
-        }
-    }
-
-    TextField {
-        id: canIDField8
-        x: 15
-        y: 814
-        width: 127
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "7DA"
-
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
-    }
-
-    TextField {
-        id: canDataField8
-        x: 148
-        y: 814
-        width: 202
-        height: 40
-        font.pixelSize: 15
-        placeholderText: "02 10 01"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
+        MyCanSend { id: row0;  rowId: "row0";  y: 0;   canIdDefault: "18DA10F1x"; onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row0.effectiveCanId}",  "can_data": "${row0.effectiveCanData}",  "interval_ms": ${parseInt(row0.ms)||0}, "row_id": "${row0.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row0.rowId}"}`)  }
+        MyCanSend { id: row1;  rowId: "row1";  y: 46;  canIdDefault: "18DA10F1x"; onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row1.effectiveCanId}",  "can_data": "${row1.effectiveCanData}",  "interval_ms": ${parseInt(row1.ms)||0}, "row_id": "${row1.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row1.rowId}"}`)  }
+        MyCanSend { id: row2;  rowId: "row2";  y: 92;  canIdDefault: "18DAF110x"; onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row2.effectiveCanId}",  "can_data": "${row2.effectiveCanData}",  "interval_ms": ${parseInt(row2.ms)||0}, "row_id": "${row2.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row2.rowId}"}`)  }
+        MyCanSend { id: row3;  rowId: "row3";  y: 138; canIdDefault: "18DAF110x"; onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row3.effectiveCanId}",  "can_data": "${row3.effectiveCanData}",  "interval_ms": ${parseInt(row3.ms)||0}, "row_id": "${row3.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row3.rowId}"}`)  }
+        MyCanSend { id: row4;  rowId: "row4";  y: 184; canIdDefault: "712";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row4.effectiveCanId}",  "can_data": "${row4.effectiveCanData}",  "interval_ms": ${parseInt(row4.ms)||0}, "row_id": "${row4.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row4.rowId}"}`)  }
+        MyCanSend { id: row5;  rowId: "row5";  y: 230; canIdDefault: "712";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row5.effectiveCanId}",  "can_data": "${row5.effectiveCanData}",  "interval_ms": ${parseInt(row5.ms)||0}, "row_id": "${row5.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row5.rowId}"}`)  }
+        MyCanSend { id: row6;  rowId: "row6";  y: 276; canIdDefault: "123x";      onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row6.effectiveCanId}",  "can_data": "${row6.effectiveCanData}",  "interval_ms": ${parseInt(row6.ms)||0}, "row_id": "${row6.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row6.rowId}"}`)  }
+        MyCanSend { id: row7;  rowId: "row7";  y: 322; canIdDefault: "321x";      onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row7.effectiveCanId}",  "can_data": "${row7.effectiveCanData}",  "interval_ms": ${parseInt(row7.ms)||0}, "row_id": "${row7.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row7.rowId}"}`)  }
+        MyCanSend { id: row8;  rowId: "row8";  y: 368; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row8.effectiveCanId}",  "can_data": "${row8.effectiveCanData}",  "interval_ms": ${parseInt(row8.ms)||0}, "row_id": "${row8.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row8.rowId}"}`)  }
+        MyCanSend { id: row9;  rowId: "row9";  y: 414; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row9.effectiveCanId}",  "can_data": "${row9.effectiveCanData}",  "interval_ms": ${parseInt(row9.ms)||0}, "row_id": "${row9.rowId}"}`)  ; onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row9.rowId}"}`)  }
+        MyCanSend { id: row10; rowId: "row10"; y: 460; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row10.effectiveCanId}", "can_data": "${row10.effectiveCanData}", "interval_ms": ${parseInt(row10.ms)||0}, "row_id": "${row10.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row10.rowId}"}`) }
+        MyCanSend { id: row11; rowId: "row11"; y: 506; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row11.effectiveCanId}", "can_data": "${row11.effectiveCanData}", "interval_ms": ${parseInt(row11.ms)||0}, "row_id": "${row11.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row11.rowId}"}`) }
+        MyCanSend { id: row12; rowId: "row12"; y: 552; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row12.effectiveCanId}", "can_data": "${row12.effectiveCanData}", "interval_ms": ${parseInt(row12.ms)||0}, "row_id": "${row12.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row12.rowId}"}`) }
+        MyCanSend { id: row13; rowId: "row13"; y: 598; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row13.effectiveCanId}", "can_data": "${row13.effectiveCanData}", "interval_ms": ${parseInt(row13.ms)||0}, "row_id": "${row13.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row13.rowId}"}`) }
+        MyCanSend { id: row14; rowId: "row14"; y: 644; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row14.effectiveCanId}", "can_data": "${row14.effectiveCanData}", "interval_ms": ${parseInt(row14.ms)||0}, "row_id": "${row14.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row14.rowId}"}`) }
+        MyCanSend { id: row15; rowId: "row15"; y: 690; canIdDefault: "7DA";       onSendClicked: toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${row15.effectiveCanId}", "can_data": "${row15.effectiveCanData}", "interval_ms": ${parseInt(row15.ms)||0}, "row_id": "${row15.rowId}"}`); onStopClicked: toThread(_MSG.output.STOP_SEND, `{"row_id": "${row15.rowId}"}`) }
     }
 }
 /*##^##

@@ -1,6 +1,6 @@
 import QtQuick 2.12
 import QtQuick.Controls 2.12
-// import QtQuick.Controls.Material 2.12
+import QtQuick.Controls.Material
 
 TextField {
     id: myText
@@ -10,7 +10,7 @@ TextField {
     selectByMouse: false
     
     // Inherit text color from Material theme
-    // color: Material.foreground
+    color: Material.foreground
     
     // Remove all padding to match Text behavior
     padding: 0
