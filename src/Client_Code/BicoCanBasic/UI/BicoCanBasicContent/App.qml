@@ -28,7 +28,6 @@ ApplicationWindow {
         request.send()
         if (request.responseText.length > 0) {
             _MSG = JSON.parse(request.responseText)
-            console.log("Message keys loaded: " + JSON.stringify(_MSG))
         } else {
             console.log("Failed to load UIMessageInterface.json from: " + url + " (status=" + request.status + ")")
         }
@@ -88,6 +87,20 @@ ApplicationWindow {
 
     // Theme mode: 0 = Light, 1 = System, 2 = Dark
     property int themeMode: 1
+
+    // Responsive layout constants
+    readonly property int _margin    : 10    // left/right margin
+    readonly property int _logTop    : 55    // y where log area starts
+    readonly property int _ctrlGap   : 5     // gap: log bottom → controls
+    readonly property int _ctrlH     : 46    // controls band height
+    readonly property int _sendGap   : 20    // gap: controls bottom → send rows
+    readonly property int _sendH     : 251   // send rows fixed height
+    readonly property int _botMargin : 13    // bottom margin
+    // Derived positions — update automatically when window resizes
+    readonly property int _ctrlY : height - _botMargin - _sendH - _sendGap - _ctrlH
+    readonly property int _sendY : height - _botMargin - _sendH
+    readonly property int _logH  : _ctrlY - _ctrlGap - _logTop
+
     Material.theme: themeMode === 0 ? Material.Light : (themeMode === 2 ? Material.Dark : Material.System)
 
     // Tri-state theme switch (top-right)
@@ -147,8 +160,8 @@ ApplicationWindow {
     // Input field for CAN baudrate
     ComboBox {
         id: baudrateField
-        x: 426
-        y: 556
+        x: window.width - 484
+        y: _ctrlY + 6
         width: 115
         height: 40
         model: ["500000", "1000000", "2000000"]
@@ -158,14 +171,12 @@ ApplicationWindow {
 
     ComboBox {
         id: comPortDropdown
-        x: 547
-        y: 556
+        x: window.width - 363
+        y: _ctrlY + 6
         width: 191
         height: 40
         model: availablePortsModel
         font.pixelSize: 15
-        anchors.verticalCenterOffset: 196
-        anchors.horizontalCenterOffset: 220
         onActivated: {
             console.log("Selected CAN port: " + comPortDropdown.currentText)
             // Query backend for the connection status of the selected port
@@ -186,8 +197,8 @@ ApplicationWindow {
 
     // FD checkbox label
     MyText {
-        x: 745
-        y: 550
+        x: window.width - 165
+        y: _ctrlY
         text: "FD:"
         font.pixelSize: 15
     }
@@ -195,8 +206,8 @@ ApplicationWindow {
     // FD checkbox
     CheckBox {
         id: fdCheckBox
-        x: 745
-        y: 565
+        x: window.width - 165
+        y: _ctrlY + 15
         width: 20
         height: 40
         checked: false
@@ -205,8 +216,8 @@ ApplicationWindow {
     // Button to connect to the device
     Button {
         id: connectButton
-        x: 776
-        y: 556
+        x: window.width - 134
+        y: _ctrlY + 6
         text: "Connect"
         width: 128
         height: 40
@@ -222,10 +233,10 @@ ApplicationWindow {
 
     // Wide area to monitor CAN frames
     Rectangle {
-        x: 10
-        y: 55
-        width: 890
-        height: 490
+        x: _margin
+        y: _logTop
+        width: window.width - 2 * _margin
+        height: _logH
         color: "transparent"
         border.color: Material.foreground
         border.width: 1
@@ -282,10 +293,10 @@ ApplicationWindow {
     Flickable {
         id: sendRowsFlickable
         x: 0
-        y: 616
-        width: 910
-        height: 251
-        contentWidth: 910
+        y: _sendY
+        width: window.width
+        height: _sendH
+        contentWidth: window.width
         contentHeight: ((rowCount - 1) * 46) + 50
         clip: true
         ScrollBar.vertical: ScrollBar {}

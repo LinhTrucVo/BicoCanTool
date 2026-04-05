@@ -4,7 +4,7 @@ import QtQuick.Controls.Material
 
 Item {
     id: root
-    width: 910
+    width: parent ? parent.width : 910
     height: 50
 
     property string canIdDefault: "18DA10F1x"
@@ -54,7 +54,7 @@ Item {
         id: canDataField
         x: 148
         y: 5
-        width: 550
+        width: root.width - 148 - 10 - 60 - 7 - 125 - 10
         height: 40
         placeholderText: root.canDataDefault
         font.pixelSize: 15
@@ -66,7 +66,7 @@ Item {
 
     TextField {
         id: msField
-        x: 708
+        x: root.width - 10 - 125 - 7 - 60
         y: 5
         width: 60
         height: 40
@@ -79,7 +79,7 @@ Item {
 
     Button {
         id: sendButton
-        x: 775
+        x: root.width - 10 - 125
         y: 5
         width: 125
         height: 40
