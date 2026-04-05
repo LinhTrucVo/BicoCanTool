@@ -1,0 +1,15 @@
+{
+    "input": {
+        "COM_PORT_LIST":            "com_port_list",
+        "CAN_LOG":                  "can_log",
+        "CONNECTION_STATUS":        "connection_status"
+    },
+    "output": {
+        "TERMINATE":                "terminate",
+        "CONNECT":                  "Connect",
+        "DISCONNECT":               "Disconnect",
+        "SEND":                     "Send",
+        "COM_PORT_LIST_UPDATE":     "com_port_list_update",
+        "QUERY_CONNECTION_STATUS":  "query_connection_status"
+    }
+}

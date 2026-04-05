@@ -14,6 +14,9 @@ from Client_Code.BicoCanBasic.BicoCanBasic import BicoCanBasic
 
 current_path = os.getcwd()
 
+# Allow QML XMLHttpRequest to read local files (needed for loading message_keys.json)
+os.environ["QML_XHR_ALLOW_FILE_READ"] = "1"
+
 # Import the qml resource, do not delete this import
 import qt_resource.resource
 
