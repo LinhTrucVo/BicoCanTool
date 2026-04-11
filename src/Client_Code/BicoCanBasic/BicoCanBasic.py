@@ -14,6 +14,7 @@ from .Data_Object.BicoCanBasic_Data import BicoCanBasic_Data
 
 import json
 import os
+import subprocess
 import can
 from can.interfaces.vector import get_channel_configs
 from datetime import datetime
@@ -111,7 +112,9 @@ class BicoCanBasic(Bico_QUIThread):
                 
             elif (mess == _MSG["input"]["CONNECT"]):
                 try:
-                    json_data = json.loads(data)
+                    # Escape backslashes in Windows file paths before JSON parsing
+                    data_escaped = data.replace("\\", "\\\\")
+                    json_data = json.loads(data_escaped)
                     can_port = json_data["can_port"]
                     can_baudrate = int(json_data["can_baudrate"])
                     can_fd = json_data.get("can_fd", False)
@@ -147,7 +150,9 @@ class BicoCanBasic(Bico_QUIThread):
                 
             elif (mess == _MSG["input"]["DISCONNECT"]):
                 try:
-                    json_data = json.loads(data)
+                    # Escape backslashes in Windows file paths before JSON parsing
+                    data_escaped = data.replace("\\", "\\\\")
+                    json_data = json.loads(data_escaped)
                     can_port = json_data["can_port"]
                     can_baudrate = int(json_data["can_baudrate"])
                     # print(self.objectName() + " " + mess + ": ")
@@ -165,35 +170,48 @@ class BicoCanBasic(Bico_QUIThread):
                     
             elif (mess == _MSG["input"]["SEND"]):
                 try:
-                    json_data = json.loads(data)
+                    # Escape backslashes in Windows file paths before JSON parsing
+                    data_escaped = data.replace("\\", "\\\\")
+                    json_data = json.loads(data_escaped)
                     can_port = json_data["can_port"]
-                    hex_string = str(json_data["can_data"]).replace(" ", "")
-                    hex_stream = list(bytes.fromhex(hex_string))
-                    
-                    is_extended = json_data["can_id"].endswith("x")
-                    can_id = int(json_data["can_id"].rstrip("x"), 16)
-                    
-                    tx_msg = can.Message(
-                                arbitration_id=can_id,
-                                is_extended_id=is_extended,
-                                is_fd= (can.CanProtocol.CAN_FD == self.bus[can_port].__dict__.get('_can_protocol', '')),
-                                data=hex_stream,
-                            )
-                    
-                    if can_port in self.bus and self.bus[can_port] is not None:
-                        self.bus[can_port].send(tx_msg, timeout=0.01)
-                        can_log = self.generateCanLog(tx_msg, can_port, "TX")
-                        self.updateCanLog(can_log)
-                    
-                    interval_ms = json_data.get("interval_ms", 0)
-                    row_id = json_data.get("row_id", "")
-                    if interval_ms > 0 and row_id:
-                        self._periodic_tasks[row_id] = {
-                            "can_port": can_port,
-                            "tx_msg": tx_msg,
-                            "interval_ms": interval_ms,
-                            "last_sent": datetime.now(),
-                        }
+                    can_data_str = str(json_data["can_data"])
+
+                    if os.path.isfile(can_data_str):
+                        # Resolve path with tilde expansion and normalize
+                        resolved_path = os.path.expanduser(can_data_str)
+                        resolved_path = os.path.normpath(resolved_path)
+                        print(f"Executing script file: {resolved_path}")
+                        subprocess.Popen(resolved_path, shell=True)
+                        print(f"Script launched: {resolved_path}")
+                        
+                    else:
+                        hex_string = can_data_str.replace(" ", "")
+                        hex_stream = list(bytes.fromhex(hex_string))
+
+                        is_extended = json_data["can_id"].endswith("x")
+                        can_id = int(json_data["can_id"].rstrip("x"), 16)
+
+                        tx_msg = can.Message(
+                                    arbitration_id=can_id,
+                                    is_extended_id=is_extended,
+                                    is_fd= (can.CanProtocol.CAN_FD == self.bus[can_port].__dict__.get('_can_protocol', '')),
+                                    data=hex_stream,
+                                )
+
+                        if can_port in self.bus and self.bus[can_port] is not None:
+                            self.bus[can_port].send(tx_msg, timeout=0.01)
+                            can_log = self.generateCanLog(tx_msg, can_port, "TX")
+                            self.updateCanLog(can_log)
+
+                        interval_ms = json_data.get("interval_ms", 0)
+                        row_id = json_data.get("row_id", "")
+                        if interval_ms > 0 and row_id:
+                            self._periodic_tasks[row_id] = {
+                                "can_port": can_port,
+                                "tx_msg": tx_msg,
+                                "interval_ms": interval_ms,
+                                "last_sent": datetime.now(),
+                            }
                 except:
                     print("Error, but I don't know what it is >_<")
                 finally:
@@ -201,7 +219,9 @@ class BicoCanBasic(Bico_QUIThread):
                 
             elif (mess == _MSG["input"]["STOP_SEND"]):
                 try:
-                    json_data = json.loads(data)
+                    # Escape backslashes in Windows file paths before JSON parsing
+                    data_escaped = data.replace("\\", "\\\\")
+                    json_data = json.loads(data_escaped)
                     row_id = json_data.get("row_id", "")
                     self._periodic_tasks.pop(row_id, None)
                 except:

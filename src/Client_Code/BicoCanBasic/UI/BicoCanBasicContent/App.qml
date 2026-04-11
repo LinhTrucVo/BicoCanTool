@@ -5,32 +5,34 @@ import QtQuick.Controls 2.12
 import QtQuick.Controls.Material
 // import QtQuick.Controls.Universal
 import QtQuick.Layouts 2.12
+import "../BicoCanBasic/Constants"
 import "../BicoCanBasic/MyComponents/MyText"
 import "../BicoCanBasic/MyComponents/MyCanSend"
+import "../BicoCanBasic/MyComponents/ThemeSwitch"
+import "../BicoCanBasic/MyComponents/CanPortSelector"
 
-ApplicationWindow {
-// Window {
+import "js/utils.js" as Utils
+
+// ApplicationWindow {
+Window {
     id: window
     objectName: "window"
-    width: 910
-    height: 880
+    width: Constants.width
+    height: Constants.height
     visible: true
     title: qsTr("BICO CAN Basic")
 
     // Message interface loaded from MessageInterface.json (same folder)
     property var _MSG: ({})
+    
+    property int loopIdx: 0
+    
     // Define tab order here
     Component.onCompleted: {
-        // Load message key constants from JSON
-        var request = new XMLHttpRequest()
-        var url = Qt.resolvedUrl("UIMessageInterface.json").toString()
-        request.open("GET", url, false)
-        request.send()
-        if (request.responseText.length > 0) {
-            _MSG = JSON.parse(request.responseText)
-        } else {
-            console.log("Failed to load UIMessageInterface.json from: " + url + " (status=" + request.status + ")")
-        }
+        // Load message key constants from JSON using utility function
+        // Use Qt.resolvedUrl to get the absolute path to the JSON file
+        var absJsonPath = Qt.resolvedUrl("UIMessageInterface.json");
+        _MSG = Utils.loadUIMessageInterface(absJsonPath) || {};
     }
 
     // Signal transfer send data to Thread - begin ------------------------------------------------------------------
@@ -44,19 +46,19 @@ ApplicationWindow {
         if (rev_mess === _MSG.input.COM_PORT_LIST)
         {
             console.log(rev_mess + " " + rev_data)
-            availablePortsModel.clear()
-            for (var i = 0; i < rev_data.length; i++) {
-                availablePortsModel.append({"port": rev_data[i]});
+            comCanPortSelector.portModel.clear()
+            for (loopIdx = 0; loopIdx < rev_data.length; loopIdx++) {
+                comCanPortSelector.portModel.append({"port": rev_data[loopIdx]});
             }
         }
         else if (rev_mess === _MSG.input.CAN_LOG)
         {
             var newLines = rev_data.split("\n")
-            for (var i = 0; i < newLines.length; i++) {
-                if (newLines[i].length > 0) {
+            for (loopIdx = 0; loopIdx < newLines.length; loopIdx++) {
+                if (newLines[loopIdx].length > 0) {
                     if (canLogModel.count >= 50000)
                         canLogModel.remove(0, 1)
-                    canLogModel.append({"line": newLines[i]})
+                    canLogModel.append({"line": newLines[loopIdx]})
                 }
             }
             canLogView.positionViewAtEnd()
@@ -65,9 +67,9 @@ ApplicationWindow {
         {
             var statusData = JSON.parse(rev_data)
             // Update connect button if the status is for the currently selected port
-            if (statusData.can_port === comPortDropdown.currentText)
+            if (statusData.can_port === comCanPortSelector.currentPort)
             {
-                connectButton.text = statusData.connected ? "Disconnect" : "Connect"
+                comCanPortSelector.connectButtonText = statusData.connected ? "Disconnect" : "Connect"
             }
         }
         // This block of code is allowed to be changed - end -------------------
@@ -78,15 +80,12 @@ ApplicationWindow {
     Connections
     {
         target: window
-//		onClosing: fromUI("terminate", "") // old syntax
         function onClosing (){ toThread(_MSG.output.TERMINATE, "") } // new syntax
     }
     // Send data to Thread - begin ------------------------------------------------------------------
 
 
 
-    // Theme mode: 0 = Light, 1 = System, 2 = Dark
-    property int themeMode: 1
 
     // Responsive layout constants
     readonly property int _margin    : 10    // left/right margin
@@ -101,135 +100,64 @@ ApplicationWindow {
     readonly property int _sendY : height - _botMargin - _sendH
     readonly property int _logH  : _ctrlY - _ctrlGap - _logTop
 
-    Material.theme: themeMode === 0 ? Material.Light : (themeMode === 2 ? Material.Dark : Material.System)
-
+    // Theme mode:
+    property string themeMode: themeSwitch.light
+    Material.theme: themeMode === themeSwitch.light ? Material.Light : (themeMode === themeSwitch.dark ? Material.Dark : Material.System)
     // Tri-state theme switch (top-right)
-    Row {
+    ThemeSwitch {
         id: themeSwitch
         x: window.width - width - 5
-        y: 4
-        z: 10
-        spacing: 0
+        y: 4        
+        foreground: Material.foreground
+        background: Material.backgroundColor
+        accent: Material.accent
 
-        Repeater {
-            model: [
-                { label: "\u2600", mode: 0 },  // ☀ Light
-                { label: "Auto",   mode: 1 },  // System
-                { label: "\u263E", mode: 2 }   // ☾ Dark
-            ]
-            delegate: Rectangle {
-                width: 40
-                height: 24
-                radius: index === 0 ? 12 : (index === 2 ? 12 : 0)
-                color: window.themeMode === modelData.mode
-                       ? Material.accent
-                       : (window.Material.theme === Material.Dark ? "#555" : "#ccc")
-
-                // Round only the appropriate corners
-                Rectangle {
-                    visible: index === 0
-                    anchors.right: parent.right
-                    width: parent.width / 2
-                    height: parent.height
-                    color: parent.color
-                }
-                Rectangle {
-                    visible: index === 2
-                    anchors.left: parent.left
-                    width: parent.width / 2
-                    height: parent.height
-                    color: parent.color
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: modelData.label
-                    font.pixelSize: index === 1 ? 10 : 14
-                    color: window.themeMode === modelData.mode ? "white" : Material.foreground
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: window.themeMode = modelData.mode
-                }
-            }
+        themeMode: window.themeMode === ThemeSwitch.auto ? (window.Material.theme === Material.Dark ? ThemeSwitch.dark : ThemeSwitch.light) : window.themeMode
+        onThemeChanged: {
+            window.themeMode = themeSwitch.themeMode
+            console.log("Theme changed to: " + window.themeMode)
         }
     }
 
 
-    // Input field for CAN baudrate
-    ComboBox {
-        id: baudrateField
-        x: window.width - 484
+    // CAN Port Selector Control Bar (Baudrate, Port, FD, Connect button)
+    CanPortSelector {
+        id: comCanPortSelector
+        x: window.width - 500
         y: _ctrlY + 6
-        width: 115
         height: 40
-        model: ["500000", "1000000", "2000000"]
-        currentIndex: 0  // Default to 500000
-        font.pixelSize: 15
-    }
-
-    ComboBox {
-        id: comPortDropdown
-        x: window.width - 363
-        y: _ctrlY + 6
-        width: 191
-        height: 40
-        model: availablePortsModel
-        font.pixelSize: 15
-        onActivated: {
-            console.log("Selected CAN port: " + comPortDropdown.currentText)
-            // Query backend for the connection status of the selected port
-            toThread(_MSG.output.QUERY_CONNECTION_STATUS, comPortDropdown.currentText)
+        onPortSelected: function(port) {
+            console.log("Selected CAN port: " + port)
+            toThread(_MSG.output.QUERY_CONNECTION_STATUS, port)
         }
-        onPressedChanged: {
-            if (!pressed)
-            {
-                toThread(_MSG.output.COM_PORT_LIST_UPDATE, "")
-            }
+        onUpdatePortListRequested: {
+            toThread(_MSG.output.COM_PORT_LIST_UPDATE, "")
+        }
+        onConnectClicked: {
+            toThread("Connect", `{"can_port": "${comCanPortSelector.currentPort}", "can_baudrate": ${comCanPortSelector.currentBaudrate}, "can_fd": ${comCanPortSelector.canFdEnabled}}`)
+        }
+        onDisconnectClicked: {
+            toThread("Disconnect", `{"can_port": "${comCanPortSelector.currentPort}"}`)
         }
     }
 
-    // ListModel to hold the CAN port data
-    ListModel {
-        id: availablePortsModel
-    }
 
-    // FD checkbox label
     MyText {
-        x: window.width - 165
-        y: _ctrlY
-        text: "FD:"
+        x: 12
+        y: 33
+        text: "Time" + " ".repeat(27) + "Port" + " ".repeat(27) + "Dir" + " ".repeat(15) + "ID" + " ".repeat(14) + "DLC/[idx]"
         font.pixelSize: 15
     }
 
-    // FD checkbox
-    CheckBox {
-        id: fdCheckBox
-        x: window.width - 165
-        y: _ctrlY + 15
-        width: 20
-        height: 40
-        checked: false
-    }
-
-    // Button to connect to the device
-    Button {
-        id: connectButton
-        x: window.width - 134
-        y: _ctrlY + 6
-        text: "Connect"
-        width: 128
-        height: 40
-        font.pixelSize: 15
-        onClicked: {
-            if (comPortDropdown.currentText != "")
-            {
-                toThread(this.text, `{"can_port": "${comPortDropdown.currentText}", "can_baudrate": ${baudrateField.currentText}, "can_fd": ${fdCheckBox.checked}}`)
-            }
+    Repeater {
+        model: 8 
+        MyText {
+            x: 575 + index * 41
+            y: 33
+            text: "[" + index + "]"
+            font.pixelSize: 15
         }
     }
-
 
     // Wide area to monitor CAN frames
     Rectangle {
@@ -271,24 +199,6 @@ ApplicationWindow {
         }
     }
 
-
-    MyText {
-        x: 12
-        y: 33
-        text: "Time" + " ".repeat(27) + "Port" + " ".repeat(27) + "Dir" + " ".repeat(15) + "ID" + " ".repeat(14) + "DLC/[idx]"
-        font.pixelSize: 15
-    }
-
-    Repeater {
-        model: 8
-        MyText {
-            x: 575 + index * 41
-            y: 33
-            text: "[" + index + "]"
-            font.pixelSize: 15
-        }
-    }
-
     // Flickable Item for Send Rows
     Flickable {
         id: sendRowsFlickable
@@ -312,12 +222,19 @@ ApplicationWindow {
                 y: index * 46
                 onSendClicked: {
                     var currentRow = rowRepeater.itemAt(index)
-                    toThread("Send", `{"can_port": "${comPortDropdown.currentText}", "can_id": "${currentRow.effectiveCanId}", "can_data": "${currentRow.effectiveCanData}", "interval_ms": ${parseInt(currentRow.ms)||0}, "row_id": "row${index}"}`)
+                    toThread("Send", `{"can_port": "${comCanPortSelector.currentPort}", "can_id": "${currentRow.effectiveCanId}", "can_data": "${currentRow.effectiveCanData}", "interval_ms": ${parseInt(currentRow.ms)||0}, "row_id": "row${index}"}`)
                 }
                 onStopClicked: {
                     toThread(_MSG.output.STOP_SEND, `{"row_id": "row${index}"}`)
                 }
             }
+        }
+
+        Tumbler {
+            id: tumbler
+            x: 335
+            y: -44
+            model: 10
         }
     }
 }

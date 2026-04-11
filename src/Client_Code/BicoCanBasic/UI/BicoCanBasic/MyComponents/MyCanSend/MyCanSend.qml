@@ -30,6 +30,7 @@ Item {
     }
 
     function formatHexWithSpaces(str) {
+        if (!isValidHex(str)) return str
         var cleaned = str.replace(/\s/g, "").toUpperCase()
         var formatted = ""
         for (var i = 0; i < cleaned.length; i += 2) {
@@ -59,9 +60,6 @@ Item {
         placeholderText: root.canDataDefault
         font.pixelSize: 15
         color: isValidHex(text) ? Material.foreground : "#FF6B6B"
-        onTextChanged: {
-            text = text.toUpperCase()
-        }
     }
 
     TextField {

@@ -21,6 +21,7 @@ os.environ["QML_XHR_ALLOW_FILE_READ"] = "1"
 import qt_resource.resource
 
 if __name__ == "__main__":
+
     app = QGuiApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     Bico_QUIThread.setMainApp(app)
