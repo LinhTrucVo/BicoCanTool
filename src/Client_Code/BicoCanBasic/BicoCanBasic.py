@@ -188,13 +188,14 @@ class BicoCanBasic(Bico_QUIThread):
                         hex_string = can_data_str.replace(" ", "")
                         hex_stream = list(bytes.fromhex(hex_string))
 
-                        is_extended = json_data["can_id"].endswith("x")
                         can_id = int(json_data["can_id"].rstrip("x"), 16)
+                        is_extended = json_data["can_id"].endswith("x")
+                        is_fd = (can.CanProtocol.CAN_FD == self.bus[can_port].__dict__.get('_can_protocol', ''))
 
                         tx_msg = can.Message(
                                     arbitration_id=can_id,
                                     is_extended_id=is_extended,
-                                    is_fd= (can.CanProtocol.CAN_FD == self.bus[can_port].__dict__.get('_can_protocol', '')),
+                                    is_fd = is_fd,
                                     data=hex_stream,
                                 )
 
@@ -237,6 +238,21 @@ class BicoCanBasic(Bico_QUIThread):
                 connected = can_port in self.bus and self.bus[can_port] is not None
                 self.toUI.emit(_MSG["output"]["CONNECTION_STATUS"], json.dumps({"can_port": can_port, "connected": connected}))
 
+        # Check for incoming CAN messages on all connected buses
+        # Note: In a production application, consider using asynchronous I/O or separate threads for each bus to avoid blocking
+        try: 
+            for port_name, port_bus in self.bus.items():
+                if port_bus is not None:
+                    rx_msg = port_bus.recv(0.1)
+                    if rx_msg is not None and not rx_msg.is_error_frame:
+                        can_log = self.generateCanLog(rx_msg, port_name, "RX")
+                        self.updateCanLog(can_log)
+        except:
+            print("Error, but I don't know what it is >_<")
+        finally:
+            pass
+        
+
         # Tick periodic send tasks
         now = datetime.now()
         for row_id, task in list(self._periodic_tasks.items()):
@@ -251,20 +267,6 @@ class BicoCanBasic(Bico_QUIThread):
                         task["last_sent"] = now
                 except:
                     pass
-
-        # Check for incoming CAN messages on all connected buses
-        # Note: In a production application, consider using asynchronous I/O or separate threads for each bus to avoid blocking
-        try: 
-            for port_name, port_bus in self.bus.items():
-                if port_bus is not None:
-                    rx_msg = port_bus.recv(0)
-                    if rx_msg is not None and not rx_msg.is_error_frame:
-                        can_log = self.generateCanLog(rx_msg, port_name, "RX")
-                        self.updateCanLog(can_log)
-        except:
-            print("Error, but I don't know what it is >_<")
-        finally:
-            pass
 
         # Flush log queue if 100ms has passed since last log (idle) or since first item (max latency)
         if self._log_queue:

@@ -53,13 +53,11 @@ Window {
         }
         else if (rev_mess === _MSG.input.CAN_LOG)
         {
-            var newLines = rev_data.split("\n")
-            for (loopIdx = 0; loopIdx < newLines.length; loopIdx++) {
-                if (newLines[loopIdx].length > 0) {
-                    if (canLogModel.count >= 50000)
-                        canLogModel.remove(0, 1)
-                    canLogModel.append({"line": newLines[loopIdx]})
-                }
+            var entries = JSON.parse(rev_data)
+            for (loopIdx = 0; loopIdx < entries.length; loopIdx++) {
+                if (canLogModel.count >= 50000)
+                    canLogModel.remove(0, 1)
+                canLogModel.append(entries[loopIdx])
             }
             canLogView.positionViewAtEnd()
         }
@@ -142,25 +140,9 @@ Window {
     }
 
 
-    MyText {
-        x: 12
-        y: 33
-        text: "Time" + " ".repeat(27) + "Port" + " ".repeat(27) + "Dir" + " ".repeat(15) + "ID" + " ".repeat(14) + "DLC/[idx]"
-        font.pixelSize: 15
-    }
-
-    Repeater {
-        model: 8 
-        MyText {
-            x: 575 + index * 41
-            y: 33
-            text: "[" + index + "]"
-            font.pixelSize: 15
-        }
-    }
-
-    // Wide area to monitor CAN frames
+    // CAN log table view
     Rectangle {
+        id: canLogRect
         x: _margin
         y: _logTop
         width: window.width - 2 * _margin
@@ -169,28 +151,71 @@ Window {
         border.color: Material.foreground
         border.width: 1
 
+        readonly property var colWidths: [195, 155, 42, 82, 48, 41, 41, 41, 41, 41, 41, 41, 41]
+
+        // Header row
+        Row {
+            x: 2; y: 2
+            spacing: 0
+            Repeater {
+                model: ["Time", "Port", "Dir", "ID", "DLC", "[0]", "[1]", "[2]", "[3]", "[4]", "[5]", "[6]", "[7]"]
+                Text {
+                    width: canLogRect.colWidths[index]
+                    height: 20
+                    text: modelData
+                    font.pixelSize: 13
+                    font.family: "Consolas"
+                    font.bold: true
+                    color: Material.foreground
+                    clip: true
+                }
+            }
+        }
+
+        // Header separator
+        Rectangle {
+            x: 1; y: 23
+            width: canLogRect.width - 2
+            height: 1
+            color: Material.foreground
+            opacity: 0.5
+        }
+
         ListModel { id: canLogModel }
 
         ListView {
             id: canLogView
-            anchors.fill: parent
-            anchors.margins: 1
+            x: 1; y: 24
+            width: canLogRect.width - 2
+            height: canLogRect.height - 25
             model: canLogModel
             clip: true
             ScrollBar.vertical: ScrollBar {}
 
-            delegate: Text {
+            delegate: Item {
                 width: canLogView.width
-                text: model.line
-                font.pixelSize: 15
-                font.family: "Consolas"
-                color: Material.foreground
-                wrapMode: Text.NoWrap
+                height: 20
+                Row {
+                    spacing: 0
+                    Text { width: canLogRect.colWidths[0];  text: model.time   || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[1];  text: model.port   || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[2];  text: model.dir    || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[3];  text: model.can_id || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[4];  text: model.dlc    || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[5];  text: model.d0     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[6];  text: model.d1     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[7];  text: model.d2     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[8];  text: model.d3     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[9];  text: model.d4     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[10]; text: model.d5     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[11]; text: model.d6     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                    Text { width: canLogRect.colWidths[12]; text: model.d7     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
+                }
             }
 
             Text {
                 anchors.centerIn: parent
-                text: "CAN log appear here...."
+                text: "CAN log appears here...."
                 visible: canLogModel.count === 0
                 font.pixelSize: 15
                 color: Material.foreground
