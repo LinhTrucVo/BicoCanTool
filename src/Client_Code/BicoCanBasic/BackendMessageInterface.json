@@ -10,7 +10,6 @@
     },
     "output": {
         "COM_PORT_LIST":            "com_port_list",
-        "CAN_LOG":                  "can_log",
         "CONNECTION_STATUS":        "connection_status"
     }
 }

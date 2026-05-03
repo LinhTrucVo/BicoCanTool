@@ -11,6 +11,7 @@ from lib import Bico_QMessData
 from lib import Bico_QUIThread
 from lib import Bico_QMutexQueue
 from .Data_Object.BicoCanBasic_Data import BicoCanBasic_Data
+from .CanLogTableModel import CanLogTableModel
 
 import json
 import os
@@ -29,13 +30,11 @@ with open(_msg_keys_path) as _f:
 class BicoCanBasic(Bico_QUIThread):
     bus = {}  # Dict: port_name -> can.Bus instance (None if disconnected)
     _periodic_tasks = {}  # Dict: row_id -> {can_port, tx_msg, interval_ms, last_sent}
-    _log_queue = []        # Pending CAN log lines
-    _last_log_time = None  # datetime of last log added
-    _queue_start_time = None  # datetime when first item entered current batch
     init_done = False
     current_ports = None
     current_com_ports = None
     current_vector_can_channels = None
+    _can_log_model = CanLogTableModel()
     
     def nofityUIComPortsUpdate(self):
     
@@ -54,38 +53,12 @@ class BicoCanBasic(Bico_QUIThread):
             self.current_ports = new_ports
             self.toUI.emit(_MSG["output"]["COM_PORT_LIST"], self.current_ports)
             
-    def generateCanLog(self, can_msg:can.Message, port_name:str, direction:str="RX"):
-        dlc = can_msg.dlc
-        hex_string = ""
-        can_id_as_hex_str = hex(can_msg.arbitration_id)[2:].upper()
-        if (can_msg.is_extended_id):
-            can_id_as_hex_str = can_id_as_hex_str + "x"
-        for i in range(0, dlc):
-            if (i != 0) and ((i % 8) == 0):
-                hex_string = hex_string + '\n'
-                hex_string = hex_string + ''.ljust(61, " ")
-                hex_string = hex_string + f'[{i}]'.ljust(8, " ")
-                hex_string = hex_string + f"{can_msg.data[i]:02X}"
-            else:
-                hex_string = hex_string + '   ' + f"{can_msg.data[i]:02X}"
-                pass
-        can_log = f'{datetime.now().time()}\t{port_name.ljust(17, " ")}\t{direction}\t{can_id_as_hex_str.ljust(9, " ")}    {str(can_msg.dlc).ljust(4, " ")}{hex_string.upper()}'
-        return can_log
-    
-    def updateCanLog(self, can_log):
-        if not self._log_queue:
-            self._queue_start_time = datetime.now()
-        self._log_queue.append(can_log)
-        self._last_log_time = datetime.now()
-        if len(self._log_queue) >= 100:
-            self.flushCanLog()
+    def getContextProperties(self):
+        return {"canLogModel": self._can_log_model}
 
-    def flushCanLog(self):
-        if self._log_queue:
-            self.toUI.emit(_MSG["output"]["CAN_LOG"], "\n".join(self._log_queue))
-            self._log_queue.clear()
-            self._last_log_time = None
-            self._queue_start_time = None
+    def logCanMessage(self, can_msg: can.Message, port_name: str, direction: str = "RX"):
+        """Add one CAN frame as a new row in the table model."""
+        self._can_log_model.addEntry(can_msg, port_name, direction)
 
     def get_channel_by_name(self, channel_name):
         """Get channel index by name from Vector channel configs"""
@@ -201,8 +174,7 @@ class BicoCanBasic(Bico_QUIThread):
 
                         if can_port in self.bus and self.bus[can_port] is not None:
                             self.bus[can_port].send(tx_msg, timeout=0.01)
-                            can_log = self.generateCanLog(tx_msg, can_port, "TX")
-                            self.updateCanLog(can_log)
+                            self.logCanMessage(tx_msg, can_port, "TX")
 
                         interval_ms = json_data.get("interval_ms", 0)
                         row_id = json_data.get("row_id", "")
@@ -245,8 +217,7 @@ class BicoCanBasic(Bico_QUIThread):
                 if port_bus is not None:
                     rx_msg = port_bus.recv(0.1)
                     if rx_msg is not None and not rx_msg.is_error_frame:
-                        can_log = self.generateCanLog(rx_msg, port_name, "RX")
-                        self.updateCanLog(can_log)
+                        self.logCanMessage(rx_msg, port_name, "RX")
         except:
             print("Error, but I don't know what it is >_<")
         finally:
@@ -262,19 +233,10 @@ class BicoCanBasic(Bico_QUIThread):
                 try:
                     if can_port in self.bus and self.bus[can_port] is not None:
                         self.bus[can_port].send(tx_msg, timeout=0.01)
-                        can_log = self.generateCanLog(tx_msg, can_port, "TX")
-                        self.updateCanLog(can_log)
+                        self.logCanMessage(tx_msg, can_port, "TX")
                         task["last_sent"] = now
                 except:
                     pass
-
-        # Flush log queue if 100ms has passed since last log (idle) or since first item (max latency)
-        if self._log_queue:
-            now = datetime.now()
-            idle = self._last_log_time is not None and (now - self._last_log_time).total_seconds() * 1000 >= 100
-            overdue = self._queue_start_time is not None and (now - self._queue_start_time).total_seconds() * 1000 >= 100
-            if idle or overdue:
-                self.flushCanLog()
 
         # self.msleep(1)
 

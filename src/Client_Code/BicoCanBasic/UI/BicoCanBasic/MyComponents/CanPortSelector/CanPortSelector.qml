@@ -38,7 +38,7 @@ Row {
         id: portSelector
         width: 191
         height: parent.height - 2
-        onPortSelected: canPortSelectorRoot.portSelected(port)
+        onPortSelected: function(port) { canPortSelectorRoot.portSelected(port) }
         onUpdatePortListRequested: canPortSelectorRoot.updatePortListRequested()
     }
     

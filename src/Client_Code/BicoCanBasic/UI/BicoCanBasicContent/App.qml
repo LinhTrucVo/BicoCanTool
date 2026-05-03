@@ -1,10 +1,9 @@
-import QtQuick 2.12
-import QtQuick.Window 2.12
-import QtQuick.Controls 2.12
-// import QtQuick.Controls.Fusion
+import QtQuick 2.15
+import QtQuick.Window 2.15
+import QtQuick.Controls 2.15
 import QtQuick.Controls.Material
-// import QtQuick.Controls.Universal
-import QtQuick.Layouts 2.12
+import QtQuick.Layouts 2.15
+import Qt.labs.qmlmodels 1.0
 import "../BicoCanBasic/Constants"
 import "../BicoCanBasic/MyComponents/MyText"
 import "../BicoCanBasic/MyComponents/MyCanSend"
@@ -50,16 +49,6 @@ Window {
             for (loopIdx = 0; loopIdx < rev_data.length; loopIdx++) {
                 comCanPortSelector.portModel.append({"port": rev_data[loopIdx]});
             }
-        }
-        else if (rev_mess === _MSG.input.CAN_LOG)
-        {
-            var entries = JSON.parse(rev_data)
-            for (loopIdx = 0; loopIdx < entries.length; loopIdx++) {
-                if (canLogModel.count >= 50000)
-                    canLogModel.remove(0, 1)
-                canLogModel.append(entries[loopIdx])
-            }
-            canLogView.positionViewAtEnd()
         }
         else if (rev_mess === _MSG.input.CONNECTION_STATUS)
         {
@@ -151,23 +140,32 @@ Window {
         border.color: Material.foreground
         border.width: 1
 
-        readonly property var colWidths: [195, 155, 42, 82, 48, 41, 41, 41, 41, 41, 41, 41, 41]
+        readonly property var colHeaders:  ["Time", "Port", "Dir", "FD", "Ext", "ID", "DLC", "Data"]
+        readonly property var colWidths:   [130,     130,    35,    30,   30,    80,   40,    280]
+        readonly property int totalWidth:  130 + 130 + 35 + 30 + 30 + 80 + 40 + 280
 
-        // Header row
-        Row {
-            x: 2; y: 2
-            spacing: 0
-            Repeater {
-                model: ["Time", "Port", "Dir", "ID", "DLC", "[0]", "[1]", "[2]", "[3]", "[4]", "[5]", "[6]", "[7]"]
-                Text {
-                    width: canLogRect.colWidths[index]
-                    height: 20
-                    text: modelData
-                    font.pixelSize: 13
-                    font.family: "Consolas"
-                    font.bold: true
-                    color: Material.foreground
-                    clip: true
+        // Header row — clips at border and scrolls with the TableView
+        Item {
+            id: headerClip
+            x: 1; y: 2
+            width: canLogRect.width - 2
+            height: 20
+            clip: true
+
+            Row {
+                x: -canLogView.contentX
+                spacing: 0
+                Repeater {
+                    model: canLogRect.colHeaders
+                    Text {
+                        width: canLogRect.colWidths[index]
+                        height: 20
+                        text: modelData
+                        font.pixelSize: 13
+                        font.family: "Consolas"
+                        font.bold: true
+                        color: Material.foreground
+                    }
                 }
             }
         }
@@ -181,46 +179,45 @@ Window {
             opacity: 0.5
         }
 
-        ListModel { id: canLogModel }
+        // Auto-scroll to bottom when rows are added
+        Connections {
+            target: canLogModel
+            function onRowsInserted(parent, first, last) {
+                canLogView.positionViewAtRow(canLogModel.rowCount() - 1, TableView.AlignBottom)
+            }
+        }
 
-        ListView {
+        TableView {
             id: canLogView
             x: 1; y: 24
             width: canLogRect.width - 2
             height: canLogRect.height - 25
             model: canLogModel
             clip: true
-            ScrollBar.vertical: ScrollBar {}
+            boundsBehavior: Flickable.StopAtBounds
+            contentWidth: canLogRect.totalWidth
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded }
 
-            delegate: Item {
-                width: canLogView.width
-                height: 20
-                Row {
-                    spacing: 0
-                    Text { width: canLogRect.colWidths[0];  text: model.time   || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[1];  text: model.port   || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[2];  text: model.dir    || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[3];  text: model.can_id || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[4];  text: model.dlc    || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[5];  text: model.d0     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[6];  text: model.d1     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[7];  text: model.d2     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[8];  text: model.d3     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[9];  text: model.d4     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[10]; text: model.d5     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[11]; text: model.d6     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                    Text { width: canLogRect.colWidths[12]; text: model.d7     || ""; font.pixelSize: 13; font.family: "Consolas"; color: Material.foreground; clip: true }
-                }
-            }
+            columnWidthProvider: function(col) { return canLogRect.colWidths[col] }
+            rowHeightProvider: function(row) { return 20 }
 
-            Text {
-                anchors.centerIn: parent
-                text: "CAN log appears here...."
-                visible: canLogModel.count === 0
-                font.pixelSize: 15
+            delegate: Text {
+                text: display || ""
+                font.pixelSize: 13
+                font.family: "Consolas"
                 color: Material.foreground
-                opacity: 0.5
+                verticalAlignment: Text.AlignVCenter
             }
+        }
+
+        Text {
+            anchors.centerIn: parent
+            text: "CAN log appears here...."
+            visible: canLogModel.count === 0
+            font.pixelSize: 15
+            color: Material.foreground
+            opacity: 0.5
         }
     }
 
@@ -253,13 +250,6 @@ Window {
                     toThread(_MSG.output.STOP_SEND, `{"row_id": "row${index}"}`)
                 }
             }
-        }
-
-        Tumbler {
-            id: tumbler
-            x: 335
-            y: -44
-            model: 10
         }
     }
 }

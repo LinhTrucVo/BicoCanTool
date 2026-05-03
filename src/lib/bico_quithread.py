@@ -64,6 +64,10 @@ class EngineFactory(QObject):
         for path in Bico_QUIThread.qml_import_paths:
             thread._engine.addImportPath(path)
         
+        # Let subclass expose context properties before QML is loaded
+        for name, obj in thread.getContextProperties().items():
+            thread._engine.rootContext().setContextProperty(name, obj)
+        
         # Load the QML file (but window visibility is controlled by QML visible property)
         thread._engine.load(self.pending_params['ui_path'])
 
@@ -168,6 +172,10 @@ class Bico_QUIThread(QThread, Bico_QThread):
                 for path in __class__.qml_import_paths:
                     self._engine.addImportPath(path)
                 
+                # Let subclass expose context properties before QML is loaded
+                for name, obj in self.getContextProperties().items():
+                    self._engine.rootContext().setContextProperty(name, obj)
+                
                 # Load the QML file (but window visibility is controlled by QML visible property)
                 self._engine.load(self._ui_path)
 
@@ -195,6 +203,19 @@ class Bico_QUIThread(QThread, Bico_QThread):
                 )
         else:
             QThread.start(self, priority)
+
+    def getContextProperties(self):
+        """
+        Return a dict of {name: QObject} to expose as QML context properties.
+
+        Override in subclasses to register models or other objects on the
+        QML engine root context before the QML file is loaded.
+
+        Returns
+        -------
+        dict
+        """
+        return {}
 
     def MainTask(self):
         """
